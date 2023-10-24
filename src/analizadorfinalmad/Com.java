@@ -61,6 +61,7 @@ public class Com extends javax.swing.JFrame {
     
     
     private static final Map<String, List<String>> PRODUCTIONS = new HashMap<>();
+    private static final List<String> lexemas = new ArrayList<String>();
 
    static {
     PRODUCTIONS.put("P0", Arrays.asList("P'", "P"));
@@ -95,6 +96,7 @@ public class Com extends javax.swing.JFrame {
     private String estado;
     private String accion;
     private Stack<String> pilaux;
+    private int cont = 0;
 
     //esto es como un guardado
     String encabezadosRenglones[] = {"q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18","q19","q20","q21","q22","q23","q24","q25","q26","q27","q28","q29","q30","q31","q32","q33","q34","q35","q36","q37","q38","q39","q40","q41","q42","q43","q44"};
@@ -315,29 +317,45 @@ public class Com extends javax.swing.JFrame {
    while (!stack.isEmpty() && inputIterator.hasNext()) {
         System.out.println("Pila: " + stack);
         String state = stack.peek();
-    if (isReducing) {
-        inputSymbol = PrevioSymbol;
-        isReducing = false;
-    }else{
-             inputSymbol = inputIterator.next();
-         }
-      System.out.println("Contenido de PrevioSymbol: " + PrevioSymbol);
-System.out.println("Contenido de inputSymbol: " + inputSymbol);
-System.out.println("Contenido de inputIterator: " + inputIterator);
+        if (isReducing) {
+            inputSymbol = PrevioSymbol;
+            isReducing = false;
+        } else {
+            int i;
+            for (i = 0; i < lexemas.size(); i++) {
+                if (i == cont) {
+                    break;
+                }
+            }
+            // semantico
+            if (i < lexemas.size()) { // Check if i is within bounds
+                Semantico(lexemas.get(i));
+            }
+            if (inputIterator.hasNext()) { // Check if there are more elements in the inputIterator
+                inputSymbol = inputIterator.next();
+                cont += 1;
+            } else {
+                Semantico("$");
+                inputSymbol = "$"; // Add end of input symbol
+            }
+        }
+        //System.out.println("Contenido de PrevioSymbol: " + PrevioSymbol);
+        //System.out.println("Contenido de inputSymbol: " + inputSymbol);
+        //System.out.println("Contenido de inputIterator: " + inputIterator);
         // Consulta la tabla de análisis para obtener la acción
         String action = getAction(state, inputSymbol);
-        System.out.println("Pila despues del getaction: " + stack);
+        //System.out.println("Pila despues del getaction: " + stack);
         
         if (action.equals("P0")) {
-        // Si la acción es "P0", cambia la acción a "Accept" y cierra el bucle
-        action = "Accept";
-    }
+            // Si la acción es "P0", cambia la acción a "Accept" y cierra el bucle
+            action = "Accept";
+        }
 
 if (action.startsWith("q")) {
     // Realiza un desplazamiento
     stack.push(inputSymbol);
     stack.push("q" + action.substring(1)); // Agrega 'q' antes del número del estado
-    System.out.println("Pila después del shift: " + stack);
+    System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
 } else if (action.startsWith("P")) {
     // Realiza una reducción
     String[] actionParts = action.split("");
@@ -346,9 +364,9 @@ if (action.startsWith("q")) {
         List<String> rightHandSide = PRODUCTIONS.get(production);
 
         // Mensaje de depuración: imprime el contenido de PRODUCTIONS
-       System.out.println("Producción action "+ action);
-        System.out.println("Producción actual: "+ production);
-        System.out.println("Lado derecho de la producción: " + rightHandSide);
+        //System.out.println("Producción action "+ action);
+        //System.out.println("Producción actual: "+ production);
+        //System.out.println("Lado derecho de la producción: " + rightHandSide);
         
         if (rightHandSide.contains("€")) {
                     // La producción no puede reducirse a un símbolo vacío
@@ -369,16 +387,17 @@ if (action.startsWith("q")) {
         String estadoActual = stack.peek();
         
         
-       System.out.println("Pila antes del reduce: " + stack);
+        //System.out.println("Pila antes del reduce: " + stack);
         stack.push(nonTerminal);
         // Consulta la tabla de análisis para obtener el próximo estado después de la reducción
         String nextState = getGoto(estadoActual, nonTerminal);
         stack.push(nextState);
-         System.out.println("No Terminal: " + nonTerminal);
-        System.out.println("Pila después del reduce: " + stack);
+        //System.out.println("No Terminal: " + nonTerminal);
+        System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
+        //System.out.println("Pila después del reduce: " + stack);
         isReducing = true;
-         System.out.println("Nuevo valor del inputSymbol: " + inputSymbol);
-         PrevioSymbol= inputSymbol;
+        //System.out.println("Nuevo valor del inputSymbol: " + inputSymbol);
+        PrevioSymbol= inputSymbol;
         
          
     } else {
@@ -399,7 +418,10 @@ if (action.startsWith("q")) {
 }
   
   
-  
+public void Semantico(String lexema) {
+    // Your code for semantic analysis goes here
+    System.out.println("lexema:"+lexema);
+}
 
 
 private String getAction(String state, String token) {
@@ -407,8 +429,8 @@ private String getAction(String state, String token) {
     int row = Arrays.asList(encabezadosRenglones).indexOf(state.toLowerCase());
 
     // Resto del código permanece igual
-    System.out.println("Token: " + token + ", Column Index: " + column);
-    System.out.println("State: " + state + ", Row Index: " + row);
+    //System.out.println("Token: " + token + ", Column Index: " + column);
+    //System.out.println("State: " + state + ", Row Index: " + row);
 
     if (row >= 0 && column >= 0 && matriz[row][column].isEmpty()) {
         System.out.println("Celda vacía en la matriz. Comparando con todos los encabezados de columnas.");
@@ -432,7 +454,7 @@ private String getAction(String state, String token) {
         return "Invalid";
     } else if (row >= 0 && column >= 0) {
         String action = matriz[row][column];
-        System.out.println("Value in Matrix: " + action);
+        //System.out.println("Value in Matrix: " + action);
         return action;
     } else {
         System.out.println("Invalid indices. Row: " + row + ", Column: " + column);
@@ -448,7 +470,7 @@ private String getAction(String state, String token) {
         int column = Arrays.asList(encabezadosColumnas).indexOf(nonTerminal);
         int row = Arrays.asList(encabezadosRenglones).indexOf(state);
        if (row >= 0 && column >= 0) {
-        System.out.println("Value in Matrix: " + matriz[row][column]);
+        //System.out.println("Value in Matrix: " + matriz[row][column]);
         return matriz[row][column];
     } else {
         System.out.println("Invalid indices. Row: " + row + ", Column: " + column);
@@ -483,8 +505,9 @@ private String getAction(String state, String token) {
         return false;
     }
     private void llenarJPnaleTokens() {
-        tokens.forEach(token -> {
 
+        tokens.forEach(token -> {
+            lexemas.add(token.getLexeme());
             variable = token.getLine();
 
             //solucion rapida para imprimir el salto de linea casda que se encuentre cambio en la linea 
