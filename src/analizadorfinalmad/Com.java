@@ -40,6 +40,8 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyleContext;
 import javax.swing.text.StyledDocument;
 
+
+
 public class Com extends javax.swing.JFrame {
 
     private Directory directorio;
@@ -97,6 +99,7 @@ public class Com extends javax.swing.JFrame {
     private String accion;
     private Stack<String> pilaux;
     private int cont = 0;
+    private SymbolTable tabladeSimbolos = new SymbolTable();
 
     //esto es como un guardado
     String encabezadosRenglones[] = {"q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18","q19","q20","q21","q22","q23","q24","q25","q26","q27","q28","q29","q30","q31","q32","q33","q34","q35","q36","q37","q38","q39","q40","q41","q42","q43","q44"};
@@ -168,7 +171,7 @@ public class Com extends javax.swing.JFrame {
         stack.push("$");
         stack.push("q0");
         this.tokens = new ArrayList<>();
-      
+
 
        
 
@@ -235,7 +238,7 @@ public class Com extends javax.swing.JFrame {
             BufferedReader fileInputReader = new BufferedReader(new InputStreamReader(new FileInputStream(sourceCodeFile), "UTF8"));// Creamos un flujo de entrada para leer datos del archivo,
 
             lexer = new Lexer(fileInputReader);// Inicializamos el lexer con el contenido del archivo
-
+            String tipodato = "";
             while (true) { // Iteramos a través de cada token producido por el lexer hasta que no haya más
                 Token token = lexer.yylex();
                 if (token == null) {
@@ -243,6 +246,9 @@ public class Com extends javax.swing.JFrame {
                 }
                 // Añadimos cada token a la lista de tokens
                 tokens.add(token);
+                if(token.getLexicalComp() == "id"){
+                    tabladeSimbolos.insertar(token.getLexeme(),"","");
+                }
             }
         } catch (FileNotFoundException ex) {
             // En caso de que el archivo no pueda ser encontrado, se muestra un mensaje de error
@@ -296,14 +302,14 @@ public class Com extends javax.swing.JFrame {
       
       String possibleSymbols = "";
       
-    
+    String PrevioSymbol = "";
  public void parse() {
     String lexicoText = lexico.getText()+"$"+"$";
     String firstSymbol;
     StringTokenizer tokenizer = new StringTokenizer(lexicoText, " ,;()=+-*/$", true);
     List<String> input = new ArrayList<>();
      String inputSymbol;
-     String PrevioSymbol;
+     //String PrevioSymbol;
      boolean isReducing = false;
     while (tokenizer.hasMoreTokens()) {
         String token = tokenizer.nextToken().trim();
@@ -311,10 +317,11 @@ public class Com extends javax.swing.JFrame {
             input.add(token);
         }
    }
- System.out.println("Contenido de input: " + input);
+    //System.out.println("Contenido de input: " + input);
     Iterator<String> inputIterator = input.iterator();
-     PrevioSymbol = "";
-   while (!stack.isEmpty() && inputIterator.hasNext()) {
+     //PrevioSymbol = "";
+     String lex = "";
+    while (!stack.isEmpty() && inputIterator.hasNext()) {
         System.out.println("Pila: " + stack);
         String state = stack.peek();
         if (isReducing) {
@@ -326,16 +333,25 @@ public class Com extends javax.swing.JFrame {
                 if (i == cont) {
                     break;
                 }
+                if (TipoaDato.contains(lexemas.get(i))){
+                    tipodato = lexemas.get(i);
+                }
             }
+            if (i == 7){
+                lex = lexemas.get(6);
+            }else{
+                lex = lexemas.get(i);
+            }
+            
             // semantico
             if (i < lexemas.size()) { // Check if i is within bounds
-                Semantico(lexemas.get(i));
+                Semantico(lex,PrevioSymbol);
             }
             if (inputIterator.hasNext()) { // Check if there are more elements in the inputIterator
                 inputSymbol = inputIterator.next();
                 cont += 1;
             } else {
-                Semantico("$");
+                Semantico("$",PrevioSymbol);
                 inputSymbol = "$"; // Add end of input symbol
             }
         }
@@ -345,7 +361,11 @@ public class Com extends javax.swing.JFrame {
         // Consulta la tabla de análisis para obtener la acción
         String action = getAction(state, inputSymbol);
         //System.out.println("Pila despues del getaction: " + stack);
-        
+        if (inputSymbol.equals("id")){
+            if (TipoaDato.contains(PrevioSymbol)) {
+                tabladeSimbolos.insertar(lex,"",tipodato);
+            }
+        }
         if (action.equals("P0")) {
             // Si la acción es "P0", cambia la acción a "Accept" y cierra el bucle
             action = "Accept";
@@ -356,10 +376,12 @@ if (action.startsWith("q")) {
     stack.push(inputSymbol);
     stack.push("q" + action.substring(1)); // Agrega 'q' antes del número del estado
     System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
+    PrevioSymbol = inputSymbol;
 } else if (action.startsWith("P")) {
     // Realiza una reducción
     String[] actionParts = action.split("");
     if (actionParts.length >= 2) {
+        
         String production = action;
         List<String> rightHandSide = PRODUCTIONS.get(production);
 
@@ -416,11 +438,20 @@ if (action.startsWith("q")) {
 }
     }
 }
-  
-  
-public void Semantico(String lexema) {
-    // Your code for semantic analysis goes here
-    System.out.println("lexema:"+lexema);
+
+private static List<String> Operadores = Arrays.asList("+", "-", "*", "/", "(", ")");
+private static List<String> TipoaDato = Arrays.asList("int", "float", "char");
+
+String tipodato;
+
+private void Semantico(String lexema, String token) {
+    
+    if (Operadores.contains(lexema)) {
+        // Do something
+        System.out.println(lexema);
+    }else {
+        tabladeSimbolos.imprimir();
+    }
 }
 
 
@@ -763,6 +794,8 @@ private String getAction(String state, String token) {
         llenarJPnaleTokens();
         analisisLexicoEerr();
          List<String> input =(tokens.stream().map(Token::toString).collect(Collectors.toList()));
+
+        PrevioSymbol = "";
         parse();
         
         //noDuplicados();
