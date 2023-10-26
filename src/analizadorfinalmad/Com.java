@@ -301,7 +301,7 @@ public class Com extends javax.swing.JFrame {
       private List<String> input;
       
       String possibleSymbols = "";
-      
+      String PrevioSymbol2 = "";
     String PrevioSymbol = "";
  public void parse() {
     String lexicoText = lexico.getText()+"$"+"$";
@@ -309,7 +309,7 @@ public class Com extends javax.swing.JFrame {
     StringTokenizer tokenizer = new StringTokenizer(lexicoText, " ,;()=+-*/$", true);
     List<String> input = new ArrayList<>();
      String inputSymbol;
-     //String PrevioSymbol;
+     String PrevioSymbol;
      boolean isReducing = false;
     while (tokenizer.hasMoreTokens()) {
         String token = tokenizer.nextToken().trim();
@@ -319,7 +319,8 @@ public class Com extends javax.swing.JFrame {
    }
     //System.out.println("Contenido de input: " + input);
     Iterator<String> inputIterator = input.iterator();
-     //PrevioSymbol = "";
+     PrevioSymbol = "";
+     String type = "";
      String lex = "";
     while (!stack.isEmpty() && inputIterator.hasNext()) {
         System.out.println("Pila: " + stack);
@@ -337,21 +338,21 @@ public class Com extends javax.swing.JFrame {
                     tipodato = lexemas.get(i);
                 }
             }
-            if (i == 7){
-                lex = lexemas.get(6);
+            if (i == lexemas.size()){
+                lex = lexemas.get(i-1);
             }else{
                 lex = lexemas.get(i);
             }
             
             // semantico
             if (i < lexemas.size()) { // Check if i is within bounds
-                Semantico(lex,PrevioSymbol);
+                Semantico(lex,PrevioSymbol2);
             }
             if (inputIterator.hasNext()) { // Check if there are more elements in the inputIterator
                 inputSymbol = inputIterator.next();
                 cont += 1;
             } else {
-                Semantico("$",PrevioSymbol);
+                Semantico("$",PrevioSymbol2);
                 inputSymbol = "$"; // Add end of input symbol
             }
         }
@@ -362,8 +363,9 @@ public class Com extends javax.swing.JFrame {
         String action = getAction(state, inputSymbol);
         //System.out.println("Pila despues del getaction: " + stack);
         if (inputSymbol.equals("id")){
-            if (TipoaDato.contains(PrevioSymbol)) {
-                tabladeSimbolos.insertar(lex,"",tipodato);
+            if (TipoaDato.contains(PrevioSymbol2)) {
+                type = PrevioSymbol2;
+                tabladeSimbolos.insertar(lex,"",type);
             }
         }
         if (action.equals("P0")) {
@@ -372,16 +374,20 @@ public class Com extends javax.swing.JFrame {
         }
 
 if (action.startsWith("q")) {
+    if (action.equals("q21")) {
+            // q11 asignar al id su tipo de dato
+            tabladeSimbolos.insertar(lex, "", type);
+        }
     // Realiza un desplazamiento
     stack.push(inputSymbol);
     stack.push("q" + action.substring(1)); // Agrega 'q' antes del número del estado
     System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
-    PrevioSymbol = inputSymbol;
+    //PrevioSymbol = inputSymbol;
+    PrevioSymbol2 = inputSymbol;
 } else if (action.startsWith("P")) {
     // Realiza una reducción
     String[] actionParts = action.split("");
     if (actionParts.length >= 2) {
-        
         String production = action;
         List<String> rightHandSide = PRODUCTIONS.get(production);
 
@@ -420,6 +426,7 @@ if (action.startsWith("q")) {
         isReducing = true;
         //System.out.println("Nuevo valor del inputSymbol: " + inputSymbol);
         PrevioSymbol= inputSymbol;
+        PrevioSymbol2 = inputSymbol;
         
          
     } else {
@@ -445,7 +452,18 @@ private static List<String> TipoaDato = Arrays.asList("int", "float", "char");
 String tipodato;
 
 private void Semantico(String lexema, String token) {
-    
+    String TablaAsignacion[][] = {
+                    /* 0  1  2 */
+        /*int -   0*/{"1","",""},
+        /*float - 1*/{"1","",""},
+        /*char -  2*/{"", "",""}  
+    };
+    String TablaOperadores[][] = {
+                    /* I  F  C */
+        /*int -   0*/{"0","1","2"},
+        /*float - 1*/{"0","1",""},
+        /*char -  2*/{"" , "",""}  
+    };
     if (Operadores.contains(lexema)) {
         // Do something
         System.out.println(lexema);
@@ -795,7 +813,7 @@ private String getAction(String state, String token) {
         analisisLexicoEerr();
          List<String> input =(tokens.stream().map(Token::toString).collect(Collectors.toList()));
 
-        PrevioSymbol = "";
+        PrevioSymbol2 = "";
         parse();
         
         //noDuplicados();
