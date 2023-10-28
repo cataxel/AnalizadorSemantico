@@ -1,1 +1,1 @@
-int a,b,c; float d; d = a * b * c;
+int x,y; x = y +2 ;
