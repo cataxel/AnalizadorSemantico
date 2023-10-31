@@ -1,1 +1,1 @@
-int x,y; x = y +2 ;
+int x, y; x = 10 * y;

@@ -309,7 +309,7 @@ public class Com extends javax.swing.JFrame {
       String possibleSymbols = "";
       String PrevioSymbol2 = "";
     String PrevioSymbol = "";
-    String tipodato;
+    String tipodato, action;
 
  public void parse() {
     String lexicoText = lexico.getText()+"$"+"$";
@@ -356,11 +356,11 @@ public class Com extends javax.swing.JFrame {
             if (inputIterator.hasNext()) { // Check if there are more elements in the inputIterator
                 inputSymbol = inputIterator.next();
                 if (i < lexemas.size()) { // Check if i is within bounds
-                    Semantico(lex,inputSymbol);
+                    Semantico(lex,inputSymbol,action);
                 }
                 cont += 1;
             } else {
-                Semantico("$",PrevioSymbol2);
+                Semantico("$",PrevioSymbol2,action);
                 inputSymbol = "$"; // Add end of input symbol
             }
         }
@@ -368,7 +368,7 @@ public class Com extends javax.swing.JFrame {
         //System.out.println("Contenido de inputSymbol: " + inputSymbol);
         //System.out.println("Contenido de inputIterator: " + inputIterator);
         // Consulta la tabla de análisis para obtener la acción
-        String action = getAction(state, inputSymbol);
+        action = getAction(state, inputSymbol);
         //System.out.println("Pila despues del getaction: " + stack);
         if (inputSymbol.equals("id")){
             if (TipoaDato.contains(PrevioSymbol2)) {
@@ -459,11 +459,13 @@ if (action.startsWith("q")) {
 
 private static List<String> Operadores = Arrays.asList("+", "-", "*", "/", "(", ")",";");
 private static List<String> TipoaDato = Arrays.asList("int", "float", "char");
+String V1,V2;
 
 String lexemaAnterior, anteriorTipo,Tipo;
 int tipo = 5;
 
-private void Semantico(String lexema, String token) {
+private void Semantico(String lexema, String token, String Accion) {
+    System.out.println("Lexema "+lexema+"  token "+token);
     lexemaAnterior = lexema;
     int MapearTipo[] = {0,1,2};
     String TablaAsignacion[][] = {
@@ -479,35 +481,45 @@ private void Semantico(String lexema, String token) {
         /*char -  2*/{"" , "",""}  
     };
     if (Operadores.contains(lexema)) {
+        // cuando el token es un operador, agregarlo a a la pila de operadores
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
         if(!PilaOperadores.empty()){
             // ver si el operador que esta en el tope es de igual o mayor prioridad
-            if(getPriority(lexema) >= getPriority(PilaOperadores.get(-1))){
+            if(lexema.equals(";")){
+                while(!PilaOperadores.empty()){
+                    ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
+                    PilaOperadores.pop();
+                    
+                }
+            }else if(getPriority(lexema) >= getPriority(PilaOperadores.get(PilaOperadores.size()-1))){
+                ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
+                
                 PilaOperadores.pop();
                 // do something else
 
                 PilaOperadores.push(lexema);
-            }else if(lexema.equals(";")){
-                while(!PilaOperadores.empty()){
-                    PilaOperadores.pop();
-                }
             }else if(lexema.equals(")")){
-                while(!PilaOperadores.get(-1).equals(")")){
+                while(!PilaOperadores.get(PilaOperadores.size()-1).equals("(")){
+                    ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
                     PilaOperadores.pop();
+                    
                 }
             }
             else{
                 PilaOperadores.push(lexema);
             }
         }else{
-            PilaOperadores.push(lexema);
+            if(!lexema.equals(";")){
+                PilaOperadores.push(lexema);
+            }
        }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
-        System.out.println(lexema);
-        ExpPosfijo.push(lexema);
+        //System.out.println(lexema);
+        //ExpPosfijo.push(lexema);
     }else {
+        // cuando el token es un id, se debe agreagar a la pila semantica
         if(token.equals("id")){
             // buscar en tabla de simbolos el lexemaAnterior
             if(tabladeSimbolos.buscar(lexema).tipo.equals(null)){
@@ -524,13 +536,30 @@ private void Semantico(String lexema, String token) {
                     // no es error pero no hace nada ?
                 }else{
                     PilaSemantica.push(tipo);
+                    ExpPosfijo.push(lexema);
                 }                
+            }
+        }else if(accion.equals("P20") || accion.equals("P19")){
+            switch (accion) {
+                case "P20":
+                case "P19":
+                    if (V1.equals(null)) {
+                        V1 = lexema;
+                        System.out.println("V1 = "+V1);
+                    }else{
+                        V2 = lexema;
+                        System.out.println("V2 = "+V2);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
-        ExpPosfijo.push(lexema);
+        //ExpPosfijo.push(lexema);
     }    
+    System.out.println(ExpPosfijo);
 }
 
 public static int getPriority(String operator) {
