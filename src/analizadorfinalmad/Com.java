@@ -381,6 +381,10 @@ public class Com extends javax.swing.JFrame {
             // Si la acción es "P0", cambia la acción a "Accept" y cierra el bucle
             action = "Accept";
         }
+        if (action.equals("P8")){
+            Semantico(lex, inputSymbol, action);
+        }
+        
 
 if (action.startsWith("q")) {
     /*
@@ -459,13 +463,17 @@ if (action.startsWith("q")) {
 
 private static List<String> Operadores = Arrays.asList("+", "-", "*", "/", "(", ")",";");
 private static List<String> TipoaDato = Arrays.asList("int", "float", "char");
-String V1,V2;
+// pila de codigo intermedio
+private static Stack<String> PilaCodigo = new Stack<>();
 
-String lexemaAnterior, anteriorTipo,Tipo;
-int tipo = 5;
+String lexemaAnterior, anteriorTipo,Tipo,resultadoSemantico;
+int tipo = 5,contador,V1,V2;
 
 private void Semantico(String lexema, String token, String Accion) {
     System.out.println("Lexema "+lexema+"  token "+token);
+    if (Accion == null) {
+        Accion = "";
+    }
     lexemaAnterior = lexema;
     int MapearTipo[] = {0,1,2};
     String TablaAsignacion[][] = {
@@ -477,7 +485,7 @@ private void Semantico(String lexema, String token, String Accion) {
     String TablaOperadores[][] = {
                     /* I  F  C */
         /*int -   0*/{"0","1","2"},
-        /*float - 1*/{"0","1",""},
+        /*float - 1*/{"1","1",""},
         /*char -  2*/{"" , "",""}  
     };
     if (Operadores.contains(lexema)) {
@@ -486,20 +494,41 @@ private void Semantico(String lexema, String token, String Accion) {
         System.out.println("Pila Operadores: "+PilaOperadores);
         if(!PilaOperadores.empty()){
             // ver si el operador que esta en el tope es de igual o mayor prioridad
+            // Si el lexema es un punto y coma
             if(lexema.equals(";")){
+                // Mientras la pila de operadores no esté vacía
                 while(!PilaOperadores.empty()){
+                    // Realiza operaciones de desapilado y verifica la compatibilidad de los tipos
+                    // de datos para las operaciones
+                    V1=PilaSemantica.peek();
+                    PilaSemantica.pop();
+                    contador -= 1;
+                    PilaCodigo.pop();
+                    V2=PilaSemantica.peek();
+                    PilaSemantica.pop();
+                    //contador -=1;
+                    PilaCodigo.pop();
+                    resultadoSemantico = TablaOperadores[V1][V2];
+                    if (resultadoSemantico == "") {
+                        System.out.println("Error semantico, el tipo de dato: "+V1+" no puede operar con "+V2);
+                        break;
+                    }
+                    PilaSemantica.push(Integer.parseInt(resultadoSemantico));
+                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    System.out.println("Codigo intermedio"+PilaCodigo);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
                     PilaOperadores.pop();
                     
                 }
             }else if(getPriority(lexema) >= getPriority(PilaOperadores.get(PilaOperadores.size()-1))){
+                // Si la prioridad del lexema es mayor o igual a la del operador en el tope de la pila
+                // Desapila el operador y apila el lexema
                 ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
-                
                 PilaOperadores.pop();
-                // do something else
-
+                // hacer alguna operacion con el codigo intermedio
                 PilaOperadores.push(lexema);
             }else if(lexema.equals(")")){
+                // si es un parentesis derecho, sacar todos los operadores hasta encontrar un parentesis izquierdo
                 while(!PilaOperadores.get(PilaOperadores.size()-1).equals("(")){
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
                     PilaOperadores.pop();
@@ -507,57 +536,84 @@ private void Semantico(String lexema, String token, String Accion) {
                 }
             }
             else{
+                // Si ninguna de las condiciones anteriores se cumple, apila el lexema
                 PilaOperadores.push(lexema);
             }
         }else{
+            // Si la pila de operadores está vacía y el lexema no es un punto y coma, apila el lexema
             if(!lexema.equals(";")){
                 PilaOperadores.push(lexema);
             }
        }
+       // Cuando la acción es "P8", que podría representar una operación de asignación
+        if(Accion.equals("P8")){
+            // Obtiene el tipo del valor en la cima de la pila semántica sin eliminarlo
+            V1 = PilaSemantica.peek();
+            // Elimina el valor en la cima de la pila semántica
+            PilaSemantica.pop();
+            // Decrementa el contador, que podría estar rastreando el número de elementos en la pila
+            contador -= 1;
+            // Obtiene el nuevo tipo en la cima de la pila semántica sin eliminarlo
+            V2 = PilaSemantica.peek();
+            // Busca en la tabla de asignación el resultado semántico para los tipos V1 y V2
+            resultadoSemantico = TablaAsignacion[V1][V2];
+            // Si el resultado semántico es una cadena vacía, hay un error semántico
+            if(resultadoSemantico.equals("")){
+                // Imprime un mensaje de error
+                System.out.println("Error semantico: no coinciden los tipo de datos en la asignacion");
+            }
+            // Imprime un mensaje indicando que la asignación ha finalizado
+            System.out.println("Asignacion finalizada");
+        }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
-        //System.out.println(lexema);
-        //ExpPosfijo.push(lexema);
     }else {
         // cuando el token es un id, se debe agreagar a la pila semantica
+        // Cuando el token es un identificador ("id")
         if(token.equals("id")){
-            // buscar en tabla de simbolos el lexemaAnterior
+            // Buscar en la tabla de símbolos el lexema anterior
             if(tabladeSimbolos.buscar(lexema).tipo.equals(null)){
-                // no es error pero no hace nada ?
+                // Si el tipo del lexema es null, no se realiza ninguna acción
             }else{
-                
-                Tipo = tabladeSimbolos.buscar(lexema).tipo;
-                for(int i=0; i < TipoaDato.size(); i++){
-                    if(Tipo.equals(TipoaDato.get(i))){
-                        tipo = MapearTipo[i];
+                // Si el tipo del lexema no es null
+                Tipo = tabladeSimbolos.buscar(lexema).tipo; // Asignar el tipo del lexema a la variable Tipo
+                for(int i=0; i < TipoaDato.size(); i++){ // Iterar sobre la lista TipoaDato
+                    if(Tipo.equals(TipoaDato.get(i))){ // Si el tipo del lexema coincide con un tipo en TipoaDato
+                        tipo = MapearTipo[i]; // Asignar el tipo correspondiente de MapearTipo a la variable tipo
                     }
                 }
                 if(tipo == 5){
-                    // no es error pero no hace nada ?
-                }else{
-                    PilaSemantica.push(tipo);
-                    ExpPosfijo.push(lexema);
+                    // Si el tipo es 5, no se realiza ninguna acción
+                }else{                    
+                    PilaSemantica.push(tipo); // Empujar el tipo a la pila semántica
+                    ExpPosfijo.push(lexema); // Empujar el lexema a la pila de expresión posfija
+                    contador += 1; // Incrementar el contador
+                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek()); // Empujar una nueva variable con el contador y el tipo a la pila de código
+                    System.out.println(PilaCodigo); // Imprimir el estado actual de la pila de código
                 }                
             }
-        }else if(accion.equals("P20") || accion.equals("P19")){
-            switch (accion) {
-                case "P20":
-                case "P19":
-                    if (V1.equals(null)) {
-                        V1 = lexema;
-                        System.out.println("V1 = "+V1);
-                    }else{
-                        V2 = lexema;
-                        System.out.println("V2 = "+V2);
-                    }
-                    break;
-                default:
-                    break;
+        }
+        System.out.println(PilaCodigo);
+        if(token.equals("num")){ // Si el token actual es un número
+            // buscar el tipo de dato del lexema del token
+            if(lexema.contains(".")){ // Si el lexema contiene un punto, es un número flotante
+                // float
+                PilaSemantica.push(1); // Empuja 1 a la pila semántica para indicar un número flotante
+                ExpPosfijo.push(lexema); // Empuja el lexema a la pila de expresión posfija
+                contador += 1; // Incrementa el contador
+                PilaCodigo.push("V"+contador+":"+1); // Empuja una nueva variable con el contador y el tipo a la pila de código
+                System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
+            }else{ // Si el lexema no contiene un punto, es un número entero
+                // integer
+                PilaSemantica.push(0); // Empuja 0 a la pila semántica para indicar un número entero
+                ExpPosfijo.push(lexema); // Empuja el lexema a la pila de expresión posfija
+                contador += 1; // Incrementa el contador
+                PilaCodigo.push("V"+contador+":"+0); // Empuja una nueva variable con el contador y el tipo a la pila de código
+                System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
             }
         }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
-        //ExpPosfijo.push(lexema);
     }    
     System.out.println(ExpPosfijo);
 }
