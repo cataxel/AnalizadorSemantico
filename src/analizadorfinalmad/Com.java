@@ -44,6 +44,12 @@ import javax.swing.text.StyledDocument;
 
 public class Com extends javax.swing.JFrame {
 
+   //tabla
+    DefaultTableModel modelo;
+     DefaultTableModel modelo2;
+      DefaultTableModel modelo3;
+       DefaultTableModel modelo4;
+    
     private Directory directorio;
     //Cosas
     public ArrayList<Token> tokens;
@@ -312,6 +318,11 @@ public class Com extends javax.swing.JFrame {
     String tipodato, action;
 
  public void parse() {
+     modelo = (DefaultTableModel) this.PilaSin.getModel();
+     modelo2 = (DefaultTableModel) this.PilaSem.getModel();
+     modelo3 = (DefaultTableModel) this.PilaOp.getModel();
+     modelo4 = (DefaultTableModel) this.CodigoInt.getModel();
+     
     String lexicoText = lexico.getText()+"$"+"$";
     String firstSymbol;
     StringTokenizer tokenizer = new StringTokenizer(lexicoText, " ,;()=+-*/$", true);
@@ -397,6 +408,11 @@ if (action.startsWith("q")) {
     stack.push(inputSymbol);
     stack.push("q" + action.substring(1)); // Agrega 'q' antes del número del estado
     System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
+    
+    String PilaTemp ="";
+    PilaTemp = stack.toString();
+    Object[] datos = new Object[]{inputSymbol, PilaTemp, action};
+    modelo.addRow(datos);
     //PrevioSymbol = inputSymbol;
     PrevioSymbol2 = inputSymbol;
 } else if (action.startsWith("P")) {
@@ -437,6 +453,10 @@ if (action.startsWith("q")) {
         stack.push(nextState);
         //System.out.println("No Terminal: " + nonTerminal);
         System.out.println("token: "+inputSymbol+" Pila: " + stack +" Accion: "+action);
+        String PilaTemp ="";
+        PilaTemp = stack.toString();
+        Object[] datos = new Object[]{inputSymbol, PilaTemp, action};
+        modelo.addRow(datos);
         //System.out.println("Pila después del reduce: " + stack);
         isReducing = true;
         //System.out.println("Nuevo valor del inputSymbol: " + inputSymbol);
@@ -465,7 +485,7 @@ private static List<String> Operadores = Arrays.asList("+", "-", "*", "/", "(", 
 private static List<String> TipoaDato = Arrays.asList("int", "float", "char");
 // pila de codigo intermedio
 private static Stack<String> PilaCodigo = new Stack<>();
-
+private static List<String> OperadoresArit = Arrays.asList("+", "-", "*", "/");
 String lexemaAnterior, anteriorTipo,Tipo,resultadoSemantico;
 int tipo = 5,contador,V1,V2;
 
@@ -492,6 +512,14 @@ private void Semantico(String lexema, String token, String Accion) {
         // cuando el token es un operador, agregarlo a a la pila de operadores
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
+        String PilaSem="";
+        String PilaOp="";
+        PilaSem=PilaSemantica.toString();
+        PilaOp = PilaOperadores.toString();
+        Object[] datos = new Object[]{PilaSem};
+        Object[] datos2 = new Object[]{PilaOp};
+        modelo2.addRow(datos);
+        modelo3.addRow(datos2);
         if(!PilaOperadores.empty()){
             // ver si el operador que esta en el tope es de igual o mayor prioridad
             // Si el lexema es un punto y coma
@@ -516,24 +544,71 @@ private void Semantico(String lexema, String token, String Accion) {
                     PilaSemantica.push(Integer.parseInt(resultadoSemantico));
                     PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
                     System.out.println("Codigo intermedio"+PilaCodigo);
+                    String PilaCodigoTemp = "";
+                    PilaCodigoTemp = PilaCodigo.toString();
+                    Object[] datos10 = new Object[]{PilaCodigoTemp};
+                    modelo4.addRow(datos10);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
                     PilaOperadores.pop();
                     
                 }
-            }else if(getPriority(lexema) >= getPriority(PilaOperadores.get(PilaOperadores.size()-1))){
+            }else if(OperadoresArit.contains(lexema) ){
+                if(getPriority(lexema) >= getPriority(PilaOperadores.peek())){
                 // Si la prioridad del lexema es mayor o igual a la del operador en el tope de la pila
                 // Desapila el operador y apila el lexema
-                ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
-                PilaOperadores.pop();
-                // hacer alguna operacion con el codigo intermedio
-                PilaOperadores.push(lexema);
-            }else if(lexema.equals(")")){
-                // si es un parentesis derecho, sacar todos los operadores hasta encontrar un parentesis izquierdo
-                while(!PilaOperadores.get(PilaOperadores.size()-1).equals("(")){
+                ExpPosfijo.push(PilaOperadores.peek());
+                V1 = PilaSemantica.peek();
+                PilaSemantica.pop();
+                contador -= 1;
+                PilaCodigo.pop();
+                V2=PilaSemantica.peek();
+                PilaSemantica.pop();
+                PilaCodigo.pop();
+                resultadoSemantico = TablaOperadores[V1][V2];
+                if (resultadoSemantico == "") {
+                    System.out.println("Error semantico, el tipo de dato: "+V1+" no puede operar con "+V2);
+                }else{
+                    PilaSemantica.push(Integer.parseInt(resultadoSemantico));
+                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    System.out.println("Codigo intermedio"+PilaCodigo);
+                    String PilaCodigoTemp = "";
+                    PilaCodigoTemp = PilaCodigo.toString();
+                    Object[] datos10 = new Object[]{PilaCodigoTemp};
+                    modelo4.addRow(datos10);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
                     PilaOperadores.pop();
-                    
+                    PilaOperadores.push(lexema);
                 }
+            }else{
+                PilaOperadores.push(lexema);
+            }
+            }else if(lexema.equals(")")){
+                // si es un parentesis derecho, sacar todos los operadores hasta encontrar un parentesis izquierdo
+                while(!PilaOperadores.peek().equals("(")){
+                    V1=PilaSemantica.peek();
+                    PilaSemantica.pop();
+                    contador -= 1;
+                    PilaCodigo.pop();
+                    V2=PilaSemantica.peek();
+                    PilaSemantica.pop();
+                    //contador -=1;
+                    PilaCodigo.pop();
+                    resultadoSemantico = TablaOperadores[V1][V2];
+                    if (resultadoSemantico == "") {
+                        System.out.println("Error semantico, el tipo de dato: "+V1+" no puede operar con "+V2);
+                        break;
+                    }
+                    PilaSemantica.push(Integer.parseInt(resultadoSemantico));
+                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    System.out.println("Codigo intermedio"+PilaCodigo);
+                    String PilaCodigoTemp = "";
+                    PilaCodigoTemp = PilaCodigo.toString();
+                    Object[] datos10 = new Object[]{PilaCodigoTemp};
+                    modelo4.addRow(datos10);
+                    ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
+                    PilaOperadores.pop();
+                }
+                PilaOperadores.pop();
             }
             else{
                 // Si ninguna de las condiciones anteriores se cumple, apila el lexema
@@ -556,7 +631,7 @@ private void Semantico(String lexema, String token, String Accion) {
             // Obtiene el nuevo tipo en la cima de la pila semántica sin eliminarlo
             V2 = PilaSemantica.peek();
             // Busca en la tabla de asignación el resultado semántico para los tipos V1 y V2
-            resultadoSemantico = TablaAsignacion[V1][V2];
+            resultadoSemantico = TablaAsignacion[V2][V1];
             // Si el resultado semántico es una cadena vacía, hay un error semántico
             if(resultadoSemantico.equals("")){
                 // Imprime un mensaje de error
@@ -567,6 +642,14 @@ private void Semantico(String lexema, String token, String Accion) {
         }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
+        PilaSem="";
+         PilaOp="";
+        PilaSem=PilaSemantica.toString();
+        PilaOp = PilaOperadores.toString();
+        Object[] datos3 = new Object[]{PilaSem};
+        Object[] datos4 = new Object[]{PilaOp};
+        modelo2.addRow(datos3);
+        modelo3.addRow(datos4);
     }else {
         // cuando el token es un id, se debe agreagar a la pila semantica
         // Cuando el token es un identificador ("id")
@@ -603,6 +686,10 @@ private void Semantico(String lexema, String token, String Accion) {
                 contador += 1; // Incrementa el contador
                 PilaCodigo.push("V"+contador+":"+1); // Empuja una nueva variable con el contador y el tipo a la pila de código
                 System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
+                String PilaCodigoTemp = "";
+                PilaCodigoTemp = PilaCodigo.toString();
+                Object[] datos10 = new Object[]{PilaCodigoTemp};
+                modelo4.addRow(datos10);
             }else{ // Si el lexema no contiene un punto, es un número entero
                 // integer
                 PilaSemantica.push(0); // Empuja 0 a la pila semántica para indicar un número entero
@@ -610,26 +697,38 @@ private void Semantico(String lexema, String token, String Accion) {
                 contador += 1; // Incrementa el contador
                 PilaCodigo.push("V"+contador+":"+0); // Empuja una nueva variable con el contador y el tipo a la pila de código
                 System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
+                String PilaCodigoTemp = "";
+                PilaCodigoTemp = PilaCodigo.toString();
+                Object[] datos10 = new Object[]{PilaCodigoTemp};
+                modelo4.addRow(datos10);
             }
         }
         System.out.println("Pila Semantica: "+PilaSemantica);
         System.out.println("Pila Operadores: "+PilaOperadores);
+        
+       String PilaSem="";
+       String PilaOp="";
+        PilaSem=PilaSemantica.toString();
+        PilaOp = PilaOperadores.toString();
+        Object[] datos3 = new Object[]{PilaSem};
+        Object[] datos4 = new Object[]{PilaOp};
+        modelo2.addRow(datos3);
+        modelo3.addRow(datos4);
     }    
     System.out.println(ExpPosfijo);
 }
+
 
 public static int getPriority(String operator) {
     switch (operator) {
         case "+":
         case "-":
-            return 1;
+            return 2;
         case "*":
         case "/":
-            return 2;
-        case "(":
-            return 3;
+            return 1;
         default:
-            return 0;
+            return 3;
     }
 }
 
@@ -770,8 +869,14 @@ private String getAction(String state, String token) {
         jTabbedPane1 = new javax.swing.JTabbedPane();
         jScrollPane3 = new javax.swing.JScrollPane();
         mensajes = new javax.swing.JTextPane();
+        jScrollPane7 = new javax.swing.JScrollPane();
+        PilaSin = new javax.swing.JTable();
         jScrollPane4 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        PilaSem = new javax.swing.JTable();
+        jScrollPane6 = new javax.swing.JScrollPane();
+        PilaOp = new javax.swing.JTable();
+        jScrollPane10 = new javax.swing.JScrollPane();
+        CodigoInt = new javax.swing.JTable();
         jScrollPane1 = new javax.swing.JScrollPane();
         escritura = new javax.swing.JTextPane();
         jScrollPane2 = new javax.swing.JScrollPane();
@@ -797,17 +902,77 @@ private String getAction(String state, String token) {
 
         jTabbedPane1.addTab("Sintactico y Errores", jScrollPane3);
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        PilaSin.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
+                "Token", "Pila", "Accion"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, true, false
+            };
 
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane7.setViewportView(PilaSin);
+
+        jTabbedPane1.addTab("Pila Sintactica", jScrollPane7);
+
+        PilaSem.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Pila Semantica"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane4.setViewportView(PilaSem);
+
+        jTabbedPane1.addTab("Pila Semantica", jScrollPane4);
+
+        PilaOp.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Pila Operadores"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane6.setViewportView(PilaOp);
+
+        jTabbedPane1.addTab("Pila Operadores", jScrollPane6);
+
+        CodigoInt.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Codigo Intermedio"
             }
         ));
-        jScrollPane4.setViewportView(jTable1);
+        jScrollPane10.setViewportView(CodigoInt);
 
-        jTabbedPane1.addTab("Pila", jScrollPane4);
+        jTabbedPane1.addTab("Codigo Intermedio", jScrollPane10);
 
         jScrollPane1.setViewportView(escritura);
 
@@ -940,12 +1105,12 @@ private String getAction(String state, String token) {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 315, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 21, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 38, Short.MAX_VALUE))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jScrollPane2)
-                        .addGap(15, 15, 15)))
+                        .addGap(32, 32, 32)))
                 .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 207, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(23, 23, 23))
+                .addContainerGap())
         );
 
         pack();
@@ -1165,6 +1330,10 @@ private String getAction(String state, String token) {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTable CodigoInt;
+    private javax.swing.JTable PilaOp;
+    private javax.swing.JTable PilaSem;
+    private javax.swing.JTable PilaSin;
     private javax.swing.JButton bAbrir;
     private javax.swing.JButton bGuardar;
     private javax.swing.JButton bNuevo;
@@ -1181,11 +1350,13 @@ private String getAction(String state, String token) {
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenuItem jMenuItem4;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane10;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane6;
+    private javax.swing.JScrollPane jScrollPane7;
     private javax.swing.JTabbedPane jTabbedPane1;
-    private javax.swing.JTable jTable1;
     private javax.swing.JTextPane lexico;
     private javax.swing.JTextPane mensajes;
     // End of variables declaration//GEN-END:variables
