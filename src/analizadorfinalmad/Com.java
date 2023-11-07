@@ -179,8 +179,7 @@ public class Com extends javax.swing.JFrame {
         cosasVisuales();
         Inicial();
         
-        stack.push("$");
-        stack.push("q0");
+      
         this.tokens = new ArrayList<>();
 
 
@@ -237,6 +236,7 @@ public class Com extends javax.swing.JFrame {
     }
 
     private void analisisLexico() {
+        lexemas.clear();
         Lexer lexer = null;// Creamos un objeto lexer
         try {
             File sourceCodeFile = new File("code.encrypter");// Creamos un nuevo archivo llamado "code.encrypter" 
@@ -317,17 +317,49 @@ public class Com extends javax.swing.JFrame {
     String PrevioSymbol = "";
     String tipodato, action;
 
+    public void resetParserState() {
+    stack.clear();
+    PilaCodigo.clear();
+    PilaSemantica.clear();
+    PilaOperadores.clear();
+    ExpPosfijo.clear();
+    cont = 0;
+    PrevioSymbol = "";
+    PrevioSymbol2 = "";
+    action = "";
+    tipodato="";
+    contador =0;
+    V1=0;
+    V2=0;
+    lexemaAnterior="";
+    anteriorTipo="";
+    Tipo="";
+    resultadoSemantico="";
+    tipo= 5;
+    
+    // Reinicia todas las variables de estado según sea necesario
+}
+    
+    
  public void parse() {
+       stack.push("$");
+        stack.push("q0");
+     
      modelo = (DefaultTableModel) this.PilaSin.getModel();
      modelo2 = (DefaultTableModel) this.PilaSem.getModel();
      modelo3 = (DefaultTableModel) this.PilaOp.getModel();
      modelo4 = (DefaultTableModel) this.CodigoInt.getModel();
      
+        modelo.setRowCount(0); // Limpia la tabla asociada al modelo
+        modelo2.setRowCount(0); // Limpia la segunda tabla asociada al segundo modelo
+        modelo3.setRowCount(0); // Limpia la tercera tabla asociada al tercer modelo
+        modelo4.setRowCount(0); // Limpia la cuarta tabla asociada al cuarto modelo
+     
     String lexicoText = lexico.getText()+"$"+"$";
     String firstSymbol;
     StringTokenizer tokenizer = new StringTokenizer(lexicoText, " ,;()=+-*/$", true);
     List<String> input = new ArrayList<>();
-     String inputSymbol;
+     String inputSymbol ="";
      String PrevioSymbol;
      boolean isReducing = false;
     while (tokenizer.hasMoreTokens()) {
@@ -384,6 +416,10 @@ public class Com extends javax.swing.JFrame {
         if (inputSymbol.equals("id")){
             if (TipoaDato.contains(PrevioSymbol2)) {
                 type = PrevioSymbol2;
+                tabladeSimbolos.insertar(lex,"",type);
+                tabladeSimbolos.imprimir();
+            }
+            if(PrevioSymbol2.equals(",") && TipoaDato.contains(type)){
                 tabladeSimbolos.insertar(lex,"",type);
                 tabladeSimbolos.imprimir();
             }
@@ -488,8 +524,10 @@ private static Stack<String> PilaCodigo = new Stack<>();
 private static List<String> OperadoresArit = Arrays.asList("+", "-", "*", "/");
 String lexemaAnterior, anteriorTipo,Tipo,resultadoSemantico;
 int tipo = 5,contador,V1,V2;
+String V1S,V2S,ResultV1V2,Operador;
 
 private void Semantico(String lexema, String token, String Accion) {
+    
     System.out.println("Lexema "+lexema+"  token "+token);
     if (Accion == null) {
         Accion = "";
@@ -531,8 +569,10 @@ private void Semantico(String lexema, String token, String Accion) {
                     V1=PilaSemantica.peek();
                     PilaSemantica.pop();
                     contador -= 1;
+                    V1S = PilaCodigo.peek();
                     PilaCodigo.pop();
                     V2=PilaSemantica.peek();
+                    V2S = PilaCodigo.peek();
                     PilaSemantica.pop();
                     //contador -=1;
                     PilaCodigo.pop();
@@ -542,13 +582,15 @@ private void Semantico(String lexema, String token, String Accion) {
                         break;
                     }
                     PilaSemantica.push(Integer.parseInt(resultadoSemantico));
-                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    PilaCodigo.push("V"+contador);
+                    ResultV1V2 = PilaCodigo.peek();
                     System.out.println("Codigo intermedio"+PilaCodigo);
-                    String PilaCodigoTemp = "";
-                    PilaCodigoTemp = PilaCodigo.toString();
+                    Operador = PilaOperadores.peek();
+                    String PilaCodigoTemp =ResultV1V2 + " = "+ V2S + " " + Operador + " " + V1S;
                     Object[] datos10 = new Object[]{PilaCodigoTemp};
                     modelo4.addRow(datos10);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
+                    
                     PilaOperadores.pop();
                     
                 }
@@ -558,10 +600,12 @@ private void Semantico(String lexema, String token, String Accion) {
                 // Desapila el operador y apila el lexema
                 ExpPosfijo.push(PilaOperadores.peek());
                 V1 = PilaSemantica.peek();
+                V1S = PilaCodigo.peek();
                 PilaSemantica.pop();
                 contador -= 1;
                 PilaCodigo.pop();
                 V2=PilaSemantica.peek();
+                V2S = PilaCodigo.peek();
                 PilaSemantica.pop();
                 PilaCodigo.pop();
                 resultadoSemantico = TablaOperadores[V1][V2];
@@ -569,10 +613,11 @@ private void Semantico(String lexema, String token, String Accion) {
                     System.out.println("Error semantico, el tipo de dato: "+V1+" no puede operar con "+V2);
                 }else{
                     PilaSemantica.push(Integer.parseInt(resultadoSemantico));
-                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    PilaCodigo.push("V"+contador+":"+ lexema);
+                    ResultV1V2 = PilaCodigo.peek();
                     System.out.println("Codigo intermedio"+PilaCodigo);
-                    String PilaCodigoTemp = "";
-                    PilaCodigoTemp = PilaCodigo.toString();
+                    Operador = PilaOperadores.peek();
+                    String PilaCodigoTemp =ResultV1V2 + " = "+ V2S + " " + Operador + " " + V1S;
                     Object[] datos10 = new Object[]{PilaCodigoTemp};
                     modelo4.addRow(datos10);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
@@ -586,10 +631,12 @@ private void Semantico(String lexema, String token, String Accion) {
                 // si es un parentesis derecho, sacar todos los operadores hasta encontrar un parentesis izquierdo
                 while(!PilaOperadores.peek().equals("(")){
                     V1=PilaSemantica.peek();
+                    V1S = PilaCodigo.peek();
                     PilaSemantica.pop();
                     contador -= 1;
                     PilaCodigo.pop();
                     V2=PilaSemantica.peek();
+                    V2S = PilaCodigo.peek();
                     PilaSemantica.pop();
                     //contador -=1;
                     PilaCodigo.pop();
@@ -599,10 +646,11 @@ private void Semantico(String lexema, String token, String Accion) {
                         break;
                     }
                     PilaSemantica.push(Integer.parseInt(resultadoSemantico));
-                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek());
+                    PilaCodigo.push("V"+contador);
+                    ResultV1V2 = PilaCodigo.peek();
                     System.out.println("Codigo intermedio"+PilaCodigo);
-                    String PilaCodigoTemp = "";
-                    PilaCodigoTemp = PilaCodigo.toString();
+                    Operador = PilaOperadores.peek();
+                    String PilaCodigoTemp = ResultV1V2 + " = "+ V2S + " " + Operador + " " + V1S;
                     Object[] datos10 = new Object[]{PilaCodigoTemp};
                     modelo4.addRow(datos10);
                     ExpPosfijo.push(PilaOperadores.get(PilaOperadores.size()-1));
@@ -624,12 +672,16 @@ private void Semantico(String lexema, String token, String Accion) {
         if(Accion.equals("P8")){
             // Obtiene el tipo del valor en la cima de la pila semántica sin eliminarlo
             V1 = PilaSemantica.peek();
+            V1S = PilaCodigo.peek();
             // Elimina el valor en la cima de la pila semántica
             PilaSemantica.pop();
             // Decrementa el contador, que podría estar rastreando el número de elementos en la pila
             contador -= 1;
+            PilaCodigo.pop();
             // Obtiene el nuevo tipo en la cima de la pila semántica sin eliminarlo
             V2 = PilaSemantica.peek();
+            V2S = PilaCodigo.peek();
+            PilaCodigo.pop();
             // Busca en la tabla de asignación el resultado semántico para los tipos V1 y V2
             resultadoSemantico = TablaAsignacion[V2][V1];
             // Si el resultado semántico es una cadena vacía, hay un error semántico
@@ -637,6 +689,11 @@ private void Semantico(String lexema, String token, String Accion) {
                 // Imprime un mensaje de error
                 System.out.println("Error semantico: no coinciden los tipo de datos en la asignacion");
             }
+            PilaCodigo.push("V"+contador);
+            ResultV1V2 = PilaCodigo.peek();
+            String PilaCodigoTemp = V2S + " " + "=" + " " + V1S;
+            Object[] datos10 = new Object[]{PilaCodigoTemp};
+            modelo4.addRow(datos10);
             // Imprime un mensaje indicando que la asignación ha finalizado
             System.out.println("Asignacion finalizada");
         }
@@ -671,8 +728,11 @@ private void Semantico(String lexema, String token, String Accion) {
                     PilaSemantica.push(tipo); // Empujar el tipo a la pila semántica
                     ExpPosfijo.push(lexema); // Empujar el lexema a la pila de expresión posfija
                     contador += 1; // Incrementar el contador
-                    PilaCodigo.push("V"+contador+":"+PilaSemantica.peek()); // Empujar una nueva variable con el contador y el tipo a la pila de código
+                    PilaCodigo.push("V"+contador+":"+ lexema); // Empujar una nueva variable con el contador y el tipo a la pila de código
                     System.out.println(PilaCodigo); // Imprimir el estado actual de la pila de código
+                    String PilaCodigoTemp = PilaCodigo.peek();
+                    Object[] datos10 = new Object[]{PilaCodigoTemp};
+                    modelo4.addRow(datos10);
                 }                
             }
         }
@@ -684,10 +744,9 @@ private void Semantico(String lexema, String token, String Accion) {
                 PilaSemantica.push(1); // Empuja 1 a la pila semántica para indicar un número flotante
                 ExpPosfijo.push(lexema); // Empuja el lexema a la pila de expresión posfija
                 contador += 1; // Incrementa el contador
-                PilaCodigo.push("V"+contador+":"+1); // Empuja una nueva variable con el contador y el tipo a la pila de código
+                PilaCodigo.push("V"+contador+":"+ lexema); // Empuja una nueva variable con el contador y el tipo a la pila de código
                 System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
-                String PilaCodigoTemp = "";
-                PilaCodigoTemp = PilaCodigo.toString();
+                String PilaCodigoTemp = PilaCodigo.peek();
                 Object[] datos10 = new Object[]{PilaCodigoTemp};
                 modelo4.addRow(datos10);
             }else{ // Si el lexema no contiene un punto, es un número entero
@@ -695,10 +754,9 @@ private void Semantico(String lexema, String token, String Accion) {
                 PilaSemantica.push(0); // Empuja 0 a la pila semántica para indicar un número entero
                 ExpPosfijo.push(lexema); // Empuja el lexema a la pila de expresión posfija
                 contador += 1; // Incrementa el contador
-                PilaCodigo.push("V"+contador+":"+0); // Empuja una nueva variable con el contador y el tipo a la pila de código
+                PilaCodigo.push("V"+contador+":"+lexema); // Empuja una nueva variable con el contador y el tipo a la pila de código
                 System.out.println("Codigo intermedio"+PilaCodigo); // Imprime el código intermedio
-                String PilaCodigoTemp = "";
-                PilaCodigoTemp = PilaCodigo.toString();
+                String PilaCodigoTemp = PilaCodigo.peek();
                 Object[] datos10 = new Object[]{PilaCodigoTemp};
                 modelo4.addRow(datos10);
             }
@@ -1140,6 +1198,7 @@ private String getAction(String state, String token) {
          List<String> input =(tokens.stream().map(Token::toString).collect(Collectors.toList()));
 
         PrevioSymbol2 = "";
+        resetParserState();
         parse();
         
         //noDuplicados();
